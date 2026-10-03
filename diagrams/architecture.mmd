@@ -1,0 +1,16 @@
+flowchart LR
+  subgraph browser [Chrome]
+    panel[Side panel]
+    worker[Service worker]
+    page[Content script]
+    store[chrome.storage.local]
+  end
+
+  panel -->|Select section| worker
+  worker -->|Inject once| page
+  page -->|Snapshot and frame| panel
+  worker -->|Visible tab PNG| panel
+  panel -->|Crop locally| panel
+  panel --- store
+  panel -->|Optional one Jev request| jev[TypeSafe Jev]
+  panel -->|One LLM request| llm[Gemini or OpenAI]

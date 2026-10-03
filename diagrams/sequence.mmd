@@ -1,0 +1,25 @@
+sequenceDiagram
+  participant User
+  participant Panel
+  participant Worker
+  participant Page
+  participant Jev
+  participant LLM
+
+  User->>Panel: Select section
+  Panel->>Worker: ENSURE_CONTENT
+  Worker->>Page: Inject content script
+  User->>Page: Hover and click
+  Note over Page: No network calls
+  Page->>Panel: Section snapshot and frame
+  Panel->>Worker: CAPTURE_TAB
+  Worker-->>Panel: Visible tab PNG
+  Note over Panel: Crop locally. PNG is not sent.
+  User->>Panel: Generate prompt
+  alt Jev key saved
+    Panel->>Jev: One classification request
+    Jev-->>Panel: Component, layout, density, interactive
+  end
+  Panel->>LLM: One reconstruction request
+  LLM-->>Panel: Prompt text
+  User->>Panel: Copy prompt and save PNG

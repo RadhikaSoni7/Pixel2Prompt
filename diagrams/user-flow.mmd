@@ -1,0 +1,16 @@
+flowchart TD
+  open[Click the toolbar icon] --> select[Select section]
+  select --> hover[Hover a section]
+  hover --> click[Click to capture]
+  click --> adjust[Parent, Smaller, or Lock]
+  adjust --> stack[Choose a stack]
+  stack --> keys{LLM key saved?}
+  keys -->|No| settings[Open Settings]
+  settings --> stack
+  keys -->|Yes| generate[Generate prompt]
+  generate --> jev{Jev key saved?}
+  jev -->|Yes| analyze[One Jev request]
+  jev -->|No| write[One LLM request]
+  analyze --> write
+  write --> result[Prompt and reference PNG]
+  result --> handoff[Copy prompt and save the PNG]
