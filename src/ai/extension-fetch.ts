@@ -32,10 +32,21 @@ export async function deliverProviderFetch(
   }
 }
 
-export function extensionFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const url = requestUrl(input)
-  if (!canProxy()) return fetch(input, init)
+export async function extensionFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init)
+  } catch (error) {
+    if (!canProxy()) throw error
+    try {
+      return await proxyFetch(input, init)
+    } catch {
+      throw error
+    }
+  }
+}
 
+function proxyFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const url = requestUrl(input)
   const message = {
     type: "AI_FETCH" as const,
     url,

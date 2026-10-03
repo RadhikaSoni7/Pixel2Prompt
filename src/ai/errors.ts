@@ -34,6 +34,7 @@ export function reachabilityError(error: unknown, fallback: string, timeout: str
   if (/reload the pixel2prompt extension/i.test(message)) return new PromptError(message)
   if (error instanceof DOMException && error.name === "TimeoutError") return new PromptError(timeout)
   if (/timeout|timed out/i.test(message)) return new PromptError(timeout)
+  if (message.trim()) return new PromptError(`${fallback} ${message.trim().slice(0, 160)}`)
   return new PromptError(fallback)
 }
 
