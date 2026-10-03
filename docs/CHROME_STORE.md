@@ -11,7 +11,7 @@ Register a Chrome Web Store developer account and pay the one-time registration 
 1. Run `npm run build`.
 2. Zip the contents of `dist`, not the repository and not `node_modules`.
 3. Confirm the zip has no `.env`, no API key, and no Chrome profile.
-4. Upload that zip in the developer dashboard. The manifest version is `0.1.0`.
+4. Upload `release/pixel2prompt-1.0.0.zip`. The manifest version is `1.0.0`. Do not submit from this repository automatically.
 
 `dist` is gitignored. Build it locally before you pack.
 
