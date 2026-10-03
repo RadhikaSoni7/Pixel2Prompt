@@ -1,4 +1,5 @@
 import type { CaptureFrame, SectionSnapshot } from "../analyzer/snapshot.ts"
+import { readInvokedTab } from "../storage/invoked-tab.ts"
 import {
   isAdjustSelectionResponse,
   isCaptureTabResponse,
@@ -33,8 +34,11 @@ export async function armSelection(): Promise<{ ok: true; tab: ActiveTab } | ({ 
 
   let tab: chrome.tabs.Tab | undefined
   try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-    tab = tabs[0]
+    tab = await invokedTab()
+    if (!tab) {
+      const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+      tab = tabs[0]
+    }
   } catch (error) {
     return { ok: false, status: "error", message: errorText(error) }
   }
@@ -63,10 +67,7 @@ export async function armSelection(): Promise<{ ok: true; tab: ActiveTab } | ({ 
   }
 
   try {
-    const pong: unknown = await chrome.tabs.sendMessage(tab.id, { type: "PING" })
-    if (!isPongResponse(pong)) {
-      return { ok: false, status: "error", message: "The page did not respond." }
-    }
+    await waitForContentScript(tab.id)
     await chrome.tabs.sendMessage(tab.id, { type: "START_SELECTION" })
   } catch (error) {
     return { ok: false, status: "error", message: errorText(error) }
@@ -103,6 +104,16 @@ export async function captureTabImage(windowId: number): Promise<string> {
   return response.dataUrl
 }
 
+async function invokedTab(): Promise<chrome.tabs.Tab | undefined> {
+  const saved = await readInvokedTab()
+  if (!saved) return undefined
+  try {
+    return await chrome.tabs.get(saved.id)
+  } catch {
+    return undefined
+  }
+}
+
 function hasChromeApis(): boolean {
   return typeof chrome !== "undefined" && Boolean(chrome.tabs && chrome.runtime)
 }
@@ -115,6 +126,20 @@ async function send<T>(message: unknown): Promise<T> {
   }
 }
 
+async function waitForContentScript(tabId: number): Promise<void> {
+  let last = "The page did not respond."
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      const pong: unknown = await chrome.tabs.sendMessage(tabId, { type: "PING" })
+      if (isPongResponse(pong)) return
+    } catch (error) {
+      if (error instanceof Error && error.message.trim()) last = error.message
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  throw new Error(presentError(last))
+}
+
 function errorText(error: unknown): string {
   if (error instanceof Error && error.message.trim()) return presentError(error.message)
   return "Something went wrong while connecting to the page."
@@ -123,6 +148,9 @@ function errorText(error: unknown): string {
 function presentError(message: string): string {
   if (/cannot access|permission|activeTab/i.test(message)) {
     return "Click the Pixel2Prompt icon on this tab, then select a section."
+  }
+  if (/receiving end does not exist/i.test(message)) {
+    return "Refresh this tab, then select a section again."
   }
   return message
 }

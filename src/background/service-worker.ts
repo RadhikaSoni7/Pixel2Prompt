@@ -1,4 +1,5 @@
 import contentScript from "../content/content-script.ts?script"
+import { rememberInvokedTab } from "../storage/invoked-tab.ts"
 import {
   isCaptureTabRequest,
   isEnsureContentRequest,
@@ -6,8 +7,17 @@ import {
   type EnsureContentResponse,
 } from "../types/messages"
 
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {
+// Opening the panel with setPanelBehavior does not grant activeTab, so scripting the page fails.
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {
   // The next service-worker start retries this.
+})
+
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.id === undefined || tab.windowId === undefined) return
+  const tabId = tab.id
+  const windowId = tab.windowId
+  void chrome.sidePanel.open({ tabId })
+  void rememberInvokedTab({ id: tabId, windowId })
 })
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

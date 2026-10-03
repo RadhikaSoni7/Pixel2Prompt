@@ -31,6 +31,8 @@ export function createSelection(onCancel: () => void): SelectionController {
     busy = false
     dragging = false
     overlay = mountSnipOverlay()
+    overlay.host.tabIndex = -1
+    overlay.host.focus({ preventScroll: true })
     overlay.host.addEventListener("pointerdown", onPointerDown)
     document.addEventListener("keydown", onKeyDown, true)
   }
