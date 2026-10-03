@@ -6,7 +6,7 @@ Developer: Radhika Dholakiya · mail.buildsbyRD@gmail.com
 
 Pixel2Prompt is a Chrome extension for capturing one section of a website and turning it into a reconstruction prompt for Cursor, Claude Code, or Codex.
 
-This version is the foundation: a Manifest V3 side panel, a background service worker, and a content script that confirms it can run on the current page. Highlighting, screenshots, and AI requests are not part of this build.
+This version selects one section of a page. Hover highlights a meaningful container, click captures its structure and a cropped reference screenshot, and the side panel shows the preview. AI requests are not part of this build.
 
 ## Requirements
 
@@ -27,7 +27,7 @@ npm run build
 3. Choose Load unpacked.
 4. Select the `dist` folder in this project.
 
-Click the Pixel2Prompt toolbar icon. The side panel opens. On a normal website, Select Section checks that the content script can run.
+Click the Pixel2Prompt toolbar icon. The side panel opens. On a normal website, choose Select Section, hover a region, and click it. The panel shows the section size and a reference image. Refresh the page after reloading the extension.
 
 ## Keys
 
