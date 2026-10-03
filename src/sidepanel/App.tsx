@@ -67,6 +67,7 @@ export function App() {
       void finishCapture(message.snapshot, message.frame)
     }
 
+    if (typeof chrome === "undefined" || !chrome.runtime?.onMessage) return
     chrome.runtime.onMessage.addListener(listener)
     return () => chrome.runtime.onMessage.removeListener(listener)
   }, [])

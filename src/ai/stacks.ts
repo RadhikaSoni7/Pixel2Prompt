@@ -1,5 +1,5 @@
 export const STACKS = [
-  { id: "existing", label: "Existing project stack" },
+  { id: "existing", label: "Follow the existing project stack" },
   { id: "react", label: "React" },
   { id: "next", label: "Next.js" },
   { id: "html", label: "HTML/CSS" },

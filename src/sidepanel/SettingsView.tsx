@@ -10,21 +10,40 @@ type SettingsViewProps = {
   onBack: () => void
 }
 
+type Notice = {
+  tone: "quiet" | "busy" | "ok" | "bad"
+  text: string
+}
+
+const hint: Notice = {
+  tone: "quiet",
+  text: "Jev is optional. An LLM key is required to generate a prompt.",
+}
+
 export function SettingsView({ onBack }: SettingsViewProps) {
   const [jevApiKey, setJevApiKey] = useState("")
   const [llmProvider, setLlmProvider] = useState<LlmProvider>("gemini")
   const [llmApiKey, setLlmApiKey] = useState("")
-  const [status, setStatus] = useState<string | null>(null)
+  const [notice, setNotice] = useState<Notice>({ tone: "busy", text: "Loading saved keys..." })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    if (!hasStorage()) {
+      setNotice(hint)
+      return
+    }
     let active = true
-    void loadSettings().then((settings) => {
-      if (!active) return
-      setJevApiKey(settings.jevApiKey)
-      setLlmProvider(settings.llmProvider)
-      setLlmApiKey(settings.llmApiKey)
-    })
+    void loadSettings()
+      .then((settings) => {
+        if (!active) return
+        setJevApiKey(settings.jevApiKey)
+        setLlmProvider(settings.llmProvider)
+        setLlmApiKey(settings.llmApiKey)
+        setNotice(hint)
+      })
+      .catch(() => {
+        if (active) setNotice({ tone: "bad", text: "Could not read saved keys." })
+      })
     return () => {
       active = false
     }
@@ -32,11 +51,12 @@ export function SettingsView({ onBack }: SettingsViewProps) {
 
   async function handleSave(): Promise<void> {
     setSaving(true)
+    setNotice({ tone: "busy", text: "Saving keys..." })
     try {
       await saveSettings({ jevApiKey, llmProvider, llmApiKey })
-      setStatus("Saved in this browser.")
+      setNotice({ tone: "ok", text: "Saved in this browser." })
     } catch {
-      setStatus("Could not save these keys.")
+      setNotice({ tone: "bad", text: "Could not save these keys." })
     } finally {
       setSaving(false)
     }
@@ -44,14 +64,15 @@ export function SettingsView({ onBack }: SettingsViewProps) {
 
   async function handleClear(): Promise<void> {
     setSaving(true)
+    setNotice({ tone: "busy", text: "Clearing keys..." })
     try {
       await clearSettings()
       setJevApiKey("")
       setLlmProvider("gemini")
       setLlmApiKey("")
-      setStatus("Keys cleared from this browser.")
+      setNotice({ tone: "ok", text: "Keys cleared from this browser." })
     } catch {
-      setStatus("Could not clear these keys.")
+      setNotice({ tone: "bad", text: "Could not clear these keys." })
     } finally {
       setSaving(false)
     }
@@ -63,10 +84,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         Back
       </button>
       <h2 id="settings-title">Settings</h2>
-      <p className="lede">
-        Your API keys are stored locally. Pixel2Prompt only processes the section you
-        explicitly select.
-      </p>
+      <p className="lede">Your API keys stay in this browser. Only a section you select is sent.</p>
       <label>
         Jev API Key
         <input
@@ -99,15 +117,20 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       </label>
       <div className="button-row">
         <button type="button" className="primary" onClick={() => void handleSave()} disabled={saving}>
+          {saving ? <span className="spinner" aria-hidden="true" /> : null}
           Save
         </button>
         <button type="button" className="ghost" onClick={() => void handleClear()} disabled={saving}>
           Clear
         </button>
       </div>
-      <p className="note" role="status">
-        {status ?? "Jev is optional. An LLM key is required to generate a prompt."}
+      <p className={`banner ${notice.tone}`} role="status">
+        {notice.text}
       </p>
     </section>
   )
+}
+
+function hasStorage(): boolean {
+  return typeof chrome !== "undefined" && Boolean(chrome.storage?.local)
 }

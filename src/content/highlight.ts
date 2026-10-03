@@ -24,18 +24,18 @@ export function mountHighlight(): Highlight {
       }
       .box {
         position: fixed;
-        border: 2px solid #d6ff4a;
-        border-radius: 6px;
-        background: rgba(214, 255, 74, 0.12);
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+        border: 2px solid #3ecbff;
+        border-radius: 10px;
+        background: rgba(62, 203, 255, 0.14);
+        box-shadow: 0 0 0 1px rgba(228, 92, 255, 0.55), 0 0 22px rgba(62, 203, 255, 0.35);
       }
       .label {
         position: fixed;
         max-width: 240px;
         padding: 3px 6px;
-        border-radius: 4px;
-        background: #d6ff4a;
-        color: #152000;
+        border-radius: 6px;
+        background: #3ecbff;
+        color: #071018;
         font: 600 11px/1.3 "Segoe UI", ui-sans-serif, system-ui, sans-serif;
         white-space: nowrap;
       }

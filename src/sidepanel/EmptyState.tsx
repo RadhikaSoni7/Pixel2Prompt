@@ -14,35 +14,41 @@ type EmptyStateProps = {
 export function EmptyState({ status, onSelect }: EmptyStateProps) {
   const working = status.status === "working" || status.status === "capturing"
   const selecting = status.status === "selecting"
+  const failed = status.status === "error" || status.status === "restricted"
 
   return (
     <section className="empty" aria-labelledby="capture-title">
-      <p className="eyebrow">Capture</p>
-      <h2 id="capture-title">Capture any website section</h2>
-      <p className="lede">
-        Select a section from the current webpage and turn it into an AI-ready
-        reconstruction prompt.
+      <p className="eyebrow">
+        <span className={failed ? "dot bad" : working || selecting ? "dot busy" : "dot"} />
+        {eyebrow(status)}
       </p>
-      <button
-        type="button"
-        className="primary"
-        onClick={onSelect}
-        disabled={working}
-        aria-busy={working}
-      >
-        {status.status === "capturing"
-          ? "Capturing..."
-          : status.status === "working"
-            ? "Connecting..."
-            : selecting
-              ? "Cancel"
-              : "Select Section"}
+      <h2 id="capture-title">See It. Capture It. Rebuild It.</h2>
+      <p className="lede">
+        Select a section, then generate a reconstruction prompt for Cursor, Claude Code, or Codex.
+      </p>
+      <button type="button" className="primary" onClick={onSelect} disabled={working} aria-busy={working}>
+        {working ? <span className="spinner" aria-hidden="true" /> : null}
+        {buttonLabel(status, selecting)}
       </button>
-      <p className={`status status-${status.status}`} role="status" aria-live="polite">
+      <p className={`banner ${failed ? "bad" : working || selecting ? "busy" : "quiet"}`} role="status" aria-live="polite">
         {statusMessage(status)}
       </p>
     </section>
   )
+}
+
+function eyebrow(status: EmptyStatus): string {
+  if (status.status === "selecting") return "Selecting"
+  if (status.status === "working" || status.status === "capturing") return "Working"
+  if (status.status === "error" || status.status === "restricted") return "Needs attention"
+  return "Ready"
+}
+
+function buttonLabel(status: EmptyStatus, selecting: boolean): string {
+  if (status.status === "capturing") return "Capturing..."
+  if (status.status === "working") return "Connecting..."
+  if (selecting) return "Cancel"
+  return "Select section"
 }
 
 function statusMessage(status: EmptyStatus): string {

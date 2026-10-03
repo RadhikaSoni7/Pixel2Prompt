@@ -21,3 +21,9 @@ export function downloadDataUrl(dataUrl: string, filename: string): void {
   link.click()
   link.remove()
 }
+
+export function downloadText(text: string, filename: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/markdown" }))
+  downloadDataUrl(url, filename)
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
