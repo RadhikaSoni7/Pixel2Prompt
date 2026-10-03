@@ -1,0 +1,27 @@
+{
+  "name": "pixel2prompt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "See It. Capture It. Rebuild It.",
+  "author": "Radhika Dholakiya <mail.buildsbyRD@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^3.0.0",
+    "@types/chrome": "^0.1.24",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^5.9.2",
+    "vite": "^8.3.2"
+  }
+}
