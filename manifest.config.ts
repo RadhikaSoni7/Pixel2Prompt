@@ -27,5 +27,10 @@ export default defineManifest({
   side_panel: {
     default_path: "src/sidepanel/index.html",
   },
-  permissions: ["sidePanel", "activeTab", "scripting"],
+  permissions: ["sidePanel", "activeTab", "scripting", "storage"],
+  host_permissions: [
+    "https://api.typesafe.ai/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.openai.com/*",
+  ],
 })
