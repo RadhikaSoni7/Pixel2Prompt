@@ -9,7 +9,7 @@ sequenceDiagram
   User->>Panel: Select section
   Panel->>Worker: ENSURE_CONTENT
   Worker->>Page: Inject content script
-  User->>Page: Hover and click
+  User->>Page: Drag a rectangle
   Note over Page: No AI requests
   Page->>Panel: Compact section snapshot
   Panel->>Worker: CAPTURE_TAB

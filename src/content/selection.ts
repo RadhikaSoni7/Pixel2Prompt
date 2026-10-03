@@ -1,6 +1,7 @@
 import { createSnapshot, visibleFrame, type CaptureFrame, type SectionSnapshot } from "../analyzer/snapshot.ts"
-import { mountHighlight, type Highlight } from "./highlight.ts"
 import { parentSection, pickSection, smallerSection } from "./pick-section.ts"
+import { snipBox, type SnipBox } from "./snip.ts"
+import { mountSnipOverlay, type SnipOverlay } from "./snip-overlay.ts"
 
 export type PreparedSection = {
   snapshot: SectionSnapshot
@@ -16,44 +17,35 @@ type SelectionController = {
 export function createSelection(onCancel: () => void): SelectionController {
   let active = false
   let busy = false
-  let rafId = 0
-  let pointerX = 0
-  let pointerY = 0
   let current: Element | null = null
   let anchorX = 0
   let anchorY = 0
-  let highlight: Highlight | null = null
-  let previousCursor = ""
+  let dragX = 0
+  let dragY = 0
+  let dragging = false
+  let overlay: SnipOverlay | null = null
 
   function start(): void {
     if (active) return
     active = true
     busy = false
-    previousCursor = document.documentElement.style.cursor
-    document.documentElement.style.cursor = "crosshair"
-    document.addEventListener("mousemove", onMouseMove, true)
-    document.addEventListener("pointerdown", onPointerDown, true)
-    document.addEventListener("click", blockEvent, true)
-    document.addEventListener("auxclick", blockEvent, true)
+    dragging = false
+    overlay = mountSnipOverlay()
+    overlay.host.addEventListener("pointerdown", onPointerDown)
     document.addEventListener("keydown", onKeyDown, true)
-    window.addEventListener("scroll", onScroll, true)
   }
 
   function stop(keepTarget = false): void {
-    if (!active && !highlight) return
+    if (!active && !overlay) return
     active = false
+    dragging = false
     if (!keepTarget) current = null
-    if (rafId) cancelAnimationFrame(rafId)
-    rafId = 0
-    document.removeEventListener("mousemove", onMouseMove, true)
-    document.removeEventListener("pointerdown", onPointerDown, true)
-    document.removeEventListener("click", blockEvent, true)
-    document.removeEventListener("auxclick", blockEvent, true)
+    overlay?.host.removeEventListener("pointerdown", onPointerDown)
+    overlay?.host.removeEventListener("pointermove", onPointerMove)
+    overlay?.host.removeEventListener("pointerup", onPointerUp)
     document.removeEventListener("keydown", onKeyDown, true)
-    window.removeEventListener("scroll", onScroll, true)
-    document.documentElement.style.cursor = previousCursor
-    highlight?.hide()
-    highlight = null
+    overlay?.remove()
+    overlay = null
   }
 
   async function adjust(direction: "parent" | "smaller"): Promise<PreparedSection> {
@@ -61,113 +53,124 @@ export function createSelection(onCancel: () => void): SelectionController {
     const next = direction === "parent" ? parentSection(current) : smallerSection(current, anchorX, anchorY)
     if (!next) {
       throw new Error(
-        direction === "parent"
-          ? "Already at the top of this section."
-          : "This section has no smaller part.",
+        direction === "parent" ? "Already at the top of this section." : "This section has no smaller part.",
       )
     }
     anchorX = centerX(next)
     anchorY = centerY(next)
-    return prepare(next)
-  }
-
-  function onMouseMove(event: MouseEvent): void {
-    pointerX = event.clientX
-    pointerY = event.clientY
-    if (rafId) return
-    rafId = requestAnimationFrame(() => {
-      rafId = 0
-      const next = pickSection(pointerX, pointerY)
-      if (next === current) return
-      current = next
-      if (!next) {
-        highlight?.hide()
-        highlight = null
-        return
-      }
-      paint(next)
-    })
-  }
-
-  function onScroll(): void {
-    if (!current || rafId) return
-    rafId = requestAnimationFrame(() => {
-      rafId = 0
-      if (current) paint(current)
-    })
+    const frame = visibleFrame(next)
+    if (!frame) throw new Error("That section is outside the visible page.")
+    current = next
+    return { snapshot: createSnapshot(next), frame }
   }
 
   function onKeyDown(event: KeyboardEvent): void {
     if (event.key !== "Escape" || !active) return
     event.preventDefault()
+    event.stopPropagation()
     stop()
     onCancel()
   }
 
   function onPointerDown(event: PointerEvent): void {
-    if (!active || busy || event.button !== 0) return
-    blockEvent(event)
-    const section = current ?? pickSection(event.clientX, event.clientY)
-    if (!section) return
+    if (!active || busy || event.button !== 0 || !overlay) return
+    event.preventDefault()
+    event.stopPropagation()
+    dragging = true
+    dragX = event.clientX
+    dragY = event.clientY
     anchorX = event.clientX
     anchorY = event.clientY
+    overlay.host.setPointerCapture(event.pointerId)
+    overlay.host.addEventListener("pointermove", onPointerMove)
+    overlay.host.addEventListener("pointerup", onPointerUp)
+    overlay.host.addEventListener("pointercancel", onPointerUp)
+  }
+
+  function onPointerMove(event: PointerEvent): void {
+    if (!dragging || !overlay) return
+    event.preventDefault()
+    const box = snipBox(dragX, dragY, event.clientX, event.clientY, window.innerWidth, window.innerHeight, 1)
+    if (!box) {
+      overlay.hideBox()
+      return
+    }
+    overlay.showBox(box)
+  }
+
+  function onPointerUp(event: PointerEvent): void {
+    if (!dragging || !overlay) return
+    dragging = false
+    overlay.host.removeEventListener("pointermove", onPointerMove)
+    overlay.host.removeEventListener("pointerup", onPointerUp)
+    overlay.host.removeEventListener("pointercancel", onPointerUp)
+    const box = snipBox(dragX, dragY, event.clientX, event.clientY, window.innerWidth, window.innerHeight)
+    if (!box) {
+      overlay.hideBox()
+      return
+    }
     busy = true
-    pauseHover()
-    void prepare(section)
-      .then((prepared) => {
-        stop(true)
-        void chrome.runtime.sendMessage({
-          type: "SECTION_CAPTURED",
-          snapshot: prepared.snapshot,
-          frame: prepared.frame,
-        })
-      })
-      .catch(() => {
-        busy = false
-        if (!active) return
-        document.addEventListener("mousemove", onMouseMove, true)
-        window.addEventListener("scroll", onScroll, true)
-      })
+    anchorX = box.x + box.width / 2
+    anchorY = box.y + box.height / 2
+    overlay.remove()
+    overlay = null
+    void finishSnip(box)
   }
 
-  async function prepare(element: Element): Promise<PreparedSection> {
-    if (reveal(element)) await nextPaint()
+  async function finishSnip(box: SnipBox): Promise<void> {
     await nextPaint()
+    await nextPaint()
+    const element = pickSection(anchorX, anchorY)
     current = element
-    const frameRect = visibleFrame(element)
-    if (!frameRect) throw new Error("That section is outside the visible page.")
-    return { snapshot: createSnapshot(element), frame: frameRect }
-  }
-
-  function pauseHover(): void {
-    if (rafId) cancelAnimationFrame(rafId)
-    rafId = 0
-    document.removeEventListener("mousemove", onMouseMove, true)
-    window.removeEventListener("scroll", onScroll, true)
-    highlight?.hide()
-    highlight = null
-  }
-
-  function paint(element: Element): void {
-    const rect = element.getBoundingClientRect()
-    if (rect.width < 2 || rect.height < 2) return
-    highlight ??= mountHighlight()
-    highlight.show(rect, `Section · ${Math.round(rect.width)} × ${Math.round(rect.height)}`)
+    const prepared = {
+      snapshot: snapshotForSnip(element, box),
+      frame: frameFromBox(box),
+    }
+    stop(true)
+    void chrome.runtime.sendMessage({
+      type: "SECTION_CAPTURED",
+      snapshot: prepared.snapshot,
+      frame: prepared.frame,
+    })
   }
 
   return { start, stop, adjust }
 }
 
-function reveal(element: Element): boolean {
-  const rect = element.getBoundingClientRect()
-  const visible =
-    rect.top >= 0 &&
-    rect.left >= 0 &&
-    rect.bottom <= window.innerHeight &&
-    rect.right <= window.innerWidth
-  if (visible) return false
-  element.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" })
-  return true
+function snapshotForSnip(element: Element | null, box: SnipBox): SectionSnapshot {
+  if (!element) {
+    return {
+      tag: "region",
+      id: null,
+      className: null,
+      role: null,
+      width: box.width,
+      height: box.height,
+      elementCount: 0,
+      imageCount: 0,
+      svgCount: 0,
+      text: "",
+      style: {},
+      children: [],
+    }
+  }
+
+  return {
+    ...createSnapshot(element),
+    width: box.width,
+    height: box.height,
+  }
+}
+
+function frameFromBox(box: SnipBox): CaptureFrame {
+  return {
+    x: box.x,
+    y: box.y,
+    width: box.width,
+    height: box.height,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+  }
 }
 
 function nextPaint(): Promise<void> {
@@ -176,12 +179,6 @@ function nextPaint(): Promise<void> {
       requestAnimationFrame(() => resolve())
     })
   })
-}
-
-function blockEvent(event: Event): void {
-  event.preventDefault()
-  event.stopPropagation()
-  event.stopImmediatePropagation()
 }
 
 function centerX(element: Element): number {

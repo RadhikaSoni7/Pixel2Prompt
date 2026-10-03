@@ -52,8 +52,8 @@ Those tests passed: 13 of 13. They check the picker, the one-Jev-then-one-LLM bu
 Use a public `https` page. Do not test on `chrome://` pages or the Chrome Web Store.
 
 1. Click the Pixel2Prompt toolbar icon. The side panel opens. That click grants `activeTab` for this tab.
-2. Choose Select section. Hover several regions. The highlight should move and the page should make no request to TypeSafe, Gemini, or OpenAI.
-3. Click a section. The panel should show the selector, size, element count, and a cropped reference image.
+2. Choose Select section. Drag a rectangle around a region, like the Snipping Tool. The page should make no request to TypeSafe, Gemini, or OpenAI.
+3. Release the drag. The panel should show the selector, size, element count, and a cropped reference image of that rectangle.
 4. Try Parent, Smaller, Pick another, and Lock section.
 5. Open Settings. Save a Gemini or OpenAI key. Leave Jev empty. Return and choose Generate prompt. Expect one LLM request and a prompt.
 6. Save a Jev key and generate again on a new selection. Expect one Jev request, then one LLM request.

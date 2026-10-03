@@ -58,7 +58,7 @@ function statusMessage(status: EmptyStatus): string {
     case "working":
       return "Connecting to this page..."
     case "selecting":
-      return "Hover a section, then click. Press Esc to cancel."
+      return "Drag a rectangle around the section, like the Snipping Tool. Press Esc to cancel."
     case "capturing":
       return "Capturing the section..."
     case "restricted":

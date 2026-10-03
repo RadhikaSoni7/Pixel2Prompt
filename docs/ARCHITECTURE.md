@@ -10,16 +10,16 @@ See [diagrams/architecture.mmd](../diagrams/architecture.mmd), [diagrams/user-fl
 | --- | --- | --- |
 | Side panel | `src/sidepanel/` | React UI, crop, settings, and Generate prompt |
 | Service worker | `src/background/service-worker.ts` | Opens the panel on the toolbar click, injects the content script, captures the visible tab |
-| Content script | `src/content/` | Hover highlight and section pick. Injected on demand, not for every site |
+| Content script | `src/content/` | Snipping-tool drag selection. Injected on demand, not for every site |
 | Analyzer | `src/analyzer/` | Compact `SectionSnapshot` and the visible crop rectangle |
 | AI | `src/ai/` | Optional Jev call, then one LLM call |
 | Storage | `src/storage/settings.ts` | Jev key, provider, and LLM key in `chrome.storage.local` |
 
 ## Selection
 
-The content script walks the element under the pointer and chooses a section with `chooseSection`. Text and tiny controls are climbed. A region that covers most of the page is not selected. The highlight is a shadow-DOM overlay and does not receive pointer events.
+Select section covers the page with a snipping overlay. Drag a rectangle and release. Esc cancels. A drag smaller than 12 pixels is ignored. The overlay is removed before the screenshot, so it is not in the PNG.
 
-Clicking sends the snapshot and frame to the side panel. The service worker captures the visible tab as PNG. The panel crops that image from the frame. The highlight is hidden before the capture.
+The crop is that rectangle. The snapshot comes from the element at the center of the rectangle, with the snip’s width and height. The service worker captures the visible tab, and the panel crops it to the rectangle.
 
 Parent and Smaller ask the content script to move the selection, then capture again. Lock section only disables those controls in the panel.
 

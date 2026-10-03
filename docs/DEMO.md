@@ -15,8 +15,8 @@ The extension is not on the Chrome Web Store. The demo should show an unpacked i
 ## What to show
 
 1. The idle panel: Pixel2Prompt, See It. Capture It. Rebuild It., and Select section.
-2. Hover. The highlight follows the pointer and no network call is made.
-3. Click a section. The panel shows the selector, size, element count, and the cropped reference.
+2. Drag a rectangle around one section, the same way you use the Snipping Tool. Release to capture. Press Esc to cancel. No network call is made.
+3. The panel shows the selector, size, element count, and the cropped reference.
 4. Parent or Smaller, then Lock section.
 5. Generate prompt. The button moves from analyzing to writing, then the prompt, character count, and thumbnail appear.
 6. Copy prompt, Save prompt.md, and Save reference.png.

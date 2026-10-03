@@ -10,7 +10,7 @@ import {
 import { createSelection } from "./selection.ts"
 
 const READY_FLAG = "data-pixel2prompt"
-const READY_VERSION = "2"
+const READY_VERSION = "3"
 
 const selection = createSelection(() => {
   void chrome.runtime.sendMessage({ type: "SELECTION_CANCELLED" })
