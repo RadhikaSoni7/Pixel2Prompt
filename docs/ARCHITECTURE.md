@@ -34,7 +34,7 @@ Parent and Smaller ask the content script to move the selection, then capture ag
 1. If the LLM key is missing, it throws before any fetch.
 2. If the Jev key is present, it makes one `POST` to `https://api.typesafe.ai/v1/systemone` with model `jev-latest`. Jev classifies the section. It does not write the long prompt.
 3. If that call fails, the LLM is not called.
-4. One LLM request writes the prompt. Gemini uses `gemini-2.5-flash` and the `x-goog-api-key` header. OpenAI uses `gpt-4o-mini` and a bearer token. Temperature is `0.2`.
+4. One LLM request writes the prompt. Gemini uses `gemini-3.5-flash-lite` and the `x-goog-api-key` header. If that model is unavailable, one follow-up uses the replacement model named by the API. OpenAI uses `gpt-4o-mini` and a bearer token. Temperature is `0.2`.
 
 A single-flight lock ignores a second Generate click while the first run is in progress. Changing the stack clears the prompt and does not call the network until you generate again.
 

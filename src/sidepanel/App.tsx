@@ -26,10 +26,13 @@ type CapturedPhase = {
   snapshot: SectionSnapshot
   frame: CaptureFrame
   previewUrl: string | null
+  pageUrl: string
+  capturedAt: string
   note: string | null
   stack: StackId
   generation: "idle" | "analyzing" | "writing"
   prompt: string | null
+  jevUsed: boolean | null
 }
 
 type Phase =
@@ -45,6 +48,17 @@ const emptyCapture = {
   stack: "existing" as const,
   generation: "idle" as const,
   prompt: null,
+  jevUsed: null,
+}
+
+async function captureContext(tabId: number): Promise<{ pageUrl: string; capturedAt: string }> {
+  let pageUrl = ""
+  try {
+    pageUrl = (await chrome.tabs.get(tabId)).url ?? ""
+  } catch {
+    pageUrl = ""
+  }
+  return { pageUrl, capturedAt: new Date().toISOString() }
 }
 
 function sameCapture(current: Phase, captured: CapturedPhase): current is CapturedPhase {
@@ -105,6 +119,7 @@ export function App() {
           frame,
           previewUrl,
           note: null,
+          ...(await captureContext(tab.id)),
           ...emptyCapture,
         })
       } catch (error) {
@@ -114,6 +129,7 @@ export function App() {
           frame,
           previewUrl: null,
           note: error instanceof Error ? error.message : "Could not capture the screenshot.",
+          ...(await captureContext(tab.id)),
           ...emptyCapture,
         })
       }
@@ -136,9 +152,11 @@ export function App() {
           frame: next.frame,
           previewUrl,
           note: null,
+          ...(await captureContext(tab.id)),
           stack: previous.stack,
           generation: "idle",
           prompt: null,
+          jevUsed: null,
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : "Could not adjust the section."
@@ -165,7 +183,7 @@ export function App() {
         })
         setPhase((current) =>
           sameCapture(current, captured)
-            ? { ...current, generation: "idle", prompt: result.prompt, note: null }
+            ? { ...current, generation: "idle", prompt: result.prompt, jevUsed: result.jevUsed, note: null }
             : current,
         )
       } catch (error) {
@@ -179,7 +197,7 @@ export function App() {
 
   function handleStack(stack: StackId): void {
     setPhase((current) =>
-      current.status === "captured" ? { ...current, stack, prompt: null, generation: "idle" } : current,
+      current.status === "captured" ? { ...current, stack, prompt: null, jevUsed: null, generation: "idle" } : current,
     )
   }
 
@@ -202,12 +220,17 @@ export function App() {
           <CapturedView
             snapshot={phase.snapshot}
             previewUrl={phase.previewUrl}
+            pageUrl={phase.pageUrl}
+            capturedAt={phase.capturedAt}
+            viewportWidth={phase.frame.viewportWidth}
+            viewportHeight={phase.frame.viewportHeight}
             clipped={isClipped(phase.snapshot, phase.frame)}
             busy={false}
             note={phase.note}
             stack={phase.stack}
             generation={phase.generation}
             prompt={phase.prompt}
+            jevUsed={phase.jevUsed}
             onStack={handleStack}
             onGenerate={() => void handleGenerate()}
             onParent={() => void handleAdjust("parent")}

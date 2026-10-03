@@ -1,7 +1,7 @@
 import type { LlmProvider } from "../storage/settings.ts"
-import { PromptError, readFailure } from "./errors.ts"
+import { llmFailure, PromptError, reachabilityError, readFailure } from "./errors.ts"
 
-const GEMINI_MODEL = "gemini-2.5-flash"
+const GEMINI_MODEL = "gemini-3.5-flash-lite"
 const OPENAI_MODEL = "gpt-4o-mini"
 
 export async function writePrompt(
@@ -17,8 +17,18 @@ export async function writePrompt(
 }
 
 async function writeGemini(key: string, instructions: string, fetchImpl: typeof fetch): Promise<string> {
+  return completeGemini(GEMINI_MODEL, key, instructions, fetchImpl, true)
+}
+
+async function completeGemini(
+  model: string,
+  key: string,
+  instructions: string,
+  fetchImpl: typeof fetch,
+  allowRetry: boolean,
+): Promise<string> {
   const response = await request(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: "POST",
       headers: {
@@ -29,14 +39,15 @@ async function writeGemini(key: string, instructions: string, fetchImpl: typeof 
         contents: [{ role: "user", parts: [{ text: instructions }] }],
         generationConfig: { temperature: 0.2 },
       }),
-      signal: AbortSignal.timeout(45_000),
     },
-    key,
     fetchImpl,
   )
-  const text = geminiText(await response.json())
-  if (!text) throw new PromptError("The model returned an empty prompt.")
-  return text
+  if (response.ok) return requireText(geminiText(await response.json()))
+
+  const failure = await readFailure(response, key)
+  const suggested = allowRetry ? suggestedGeminiModel(failure.detail, model) : null
+  if (suggested) return completeGemini(suggested, key, instructions, fetchImpl, false)
+  throw llmFailure(failure, "The model could not write a prompt.")
 }
 
 async function writeOpenAi(key: string, instructions: string, fetchImpl: typeof fetch): Promise<string> {
@@ -53,34 +64,30 @@ async function writeOpenAi(key: string, instructions: string, fetchImpl: typeof 
         temperature: 0.2,
         messages: [{ role: "user", content: instructions }],
       }),
-      signal: AbortSignal.timeout(45_000),
     },
-    key,
     fetchImpl,
   )
-  const text = openAiText(await response.json())
+  if (response.ok) return requireText(openAiText(await response.json()))
+  throw llmFailure(await readFailure(response, key), "The model could not write a prompt.")
+}
+
+async function request(url: string, init: RequestInit, fetchImpl: typeof fetch): Promise<Response> {
+  try {
+    return await fetchImpl(url, { ...init, signal: AbortSignal.timeout(45_000) })
+  } catch (error) {
+    throw reachabilityError(error, "The model could not be reached.", "The model timed out. Try again.")
+  }
+}
+
+function requireText(text: string): string {
   if (!text) throw new PromptError("The model returned an empty prompt.")
   return text
 }
 
-async function request(
-  url: string,
-  init: RequestInit,
-  key: string,
-  fetchImpl: typeof fetch,
-): Promise<Response> {
-  let response: Response
-  try {
-    response = await fetchImpl(url, init)
-  } catch {
-    throw new PromptError("The model could not be reached.")
-  }
-  if (response.ok) return response
-  const failure = await readFailure(response, key)
-  if (failure === "invalid-key") {
-    throw new PromptError("The LLM provider rejected the API key. Check Settings and try again.")
-  }
-  throw new PromptError("The model could not write a prompt.")
+export function suggestedGeminiModel(detail: string, current: string): string | null {
+  const found = [...detail.matchAll(/models\/([a-z0-9][a-z0-9._-]{0,63})/gi)].map((match) => match[1] ?? "")
+  const next = found.find((id) => id.toLowerCase() !== current.toLowerCase())
+  return next || null
 }
 
 function geminiText(value: unknown): string {

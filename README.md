@@ -109,7 +109,7 @@ Source file: [diagrams/sequence.mmd](diagrams/sequence.mmd). User flow: [diagram
 - React 19 and TypeScript
 - Vite and CRXJS
 - Optional TypeSafe Jev (`jev-latest`)
-- Gemini (`gemini-2.5-flash`) or OpenAI (`gpt-4o-mini`)
+- Gemini (`gemini-3.5-flash-lite`) or OpenAI (`gpt-4o-mini`)
 - Keys in `chrome.storage.local`
 
 ## 🚀 Installation

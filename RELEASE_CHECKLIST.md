@@ -16,7 +16,7 @@ Unpacked build: `dist/`
 | Prompt | Generate prompt writes one reconstruction prompt from the compact snapshot. |
 | BYOK | Keys are entered in Settings and stored in `chrome.storage.local`. `.env` is not read. |
 | Jev | Optional. One request to `https://api.typesafe.ai/v1/systemone`. A failure does not call the LLM. |
-| LLM | One request. Gemini `gemini-2.5-flash` or OpenAI `gpt-4o-mini`. |
+| LLM | One request, plus one Gemini retry if the API names a replacement model. Gemini `gemini-3.5-flash-lite` or OpenAI `gpt-4o-mini`. |
 | Copy | Copy prompt uses the clipboard from the button click. |
 | Download | Save prompt.md and Save reference.png use a link click. No `downloads` permission. |
 | Errors | Missing LLM key: no fetch. Invalid Jev key: Jev message, no LLM call. Invalid LLM key: provider message, key redacted. |

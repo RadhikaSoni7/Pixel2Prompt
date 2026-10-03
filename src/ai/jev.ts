@@ -1,5 +1,5 @@
 import type { SectionSnapshot } from "../analyzer/snapshot.ts"
-import { PromptError, readFailure } from "./errors.ts"
+import { PromptError, reachabilityError, readFailure } from "./errors.ts"
 
 const ENDPOINT = "https://api.typesafe.ai/v1/systemone"
 
@@ -31,16 +31,25 @@ export async function analyzeWithJev(
       }),
       signal: AbortSignal.timeout(25_000),
     })
-  } catch {
-    throw new PromptError("Jev could not be reached. The model was not called.")
+  } catch (error) {
+    throw reachabilityError(
+      error,
+      "Jev could not be reached. Check the key in Settings, or clear it to generate without Jev. The model was not called.",
+      "Jev timed out. Check your connection and try again. The model was not called.",
+    )
   }
 
   if (!response.ok) {
     const failure = await readFailure(response, key)
-    if (failure === "invalid-key") {
+    if (failure.kind === "invalid-key") {
       throw new PromptError("Jev rejected the API key. Check Settings and try again.")
     }
-    throw new PromptError("Jev could not analyze this section. The model was not called.")
+    if (failure.kind === "quota") {
+      throw new PromptError("Jev is out of quota. Check the TypeSafe account, or clear the Jev key to generate without it. The model was not called.")
+    }
+    throw new PromptError(
+      `Jev could not analyze this section. ${failure.detail} The model was not called.`.replace(/\s+/g, " "),
+    )
   }
 
   return parseJev(await response.json())

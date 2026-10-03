@@ -1,6 +1,7 @@
 import type { SectionSnapshot } from "../analyzer/snapshot.ts"
 import type { AiSettings } from "../storage/settings.ts"
 import { PromptError } from "./errors.ts"
+import { extensionFetch } from "./extension-fetch.ts"
 import { analyzeWithJev, type JevAnalysis } from "./jev.ts"
 import { writePrompt } from "./llm.ts"
 import { stackInstruction, type StackId } from "./stacks.ts"
@@ -21,7 +22,7 @@ type GenerateInput = {
 }
 
 export async function generateReconstructionPrompt(input: GenerateInput): Promise<GenerationResult> {
-  const fetchImpl = input.fetchImpl ?? fetch
+  const fetchImpl = input.fetchImpl ?? extensionFetch
   const llmKey = input.settings.llmApiKey.trim()
   const jevKey = input.settings.jevApiKey.trim()
 

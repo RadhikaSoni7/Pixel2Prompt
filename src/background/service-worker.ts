@@ -1,3 +1,4 @@
+import { deliverProviderFetch, isProviderFetchMessage } from "../ai/extension-fetch.ts"
 import contentScript from "../content/content-script.ts?script"
 import { rememberInvokedTab } from "../storage/invoked-tab.ts"
 import {
@@ -38,6 +39,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         }
         sendResponse(response)
       })
+    return true
+  }
+
+  if (isProviderFetchMessage(message)) {
+    void deliverProviderFetch(message)
+      .then((response) => sendResponse(response))
+      .catch(() => sendResponse({ delivered: false, error: "The provider could not be reached." }))
     return true
   }
 

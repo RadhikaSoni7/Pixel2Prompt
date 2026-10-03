@@ -85,6 +85,34 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       </button>
       <h2 id="settings-title">Settings</h2>
       <p className="lede">Your API keys stay in this browser. Only a section you select is sent.</p>
+      <ol className="steps">
+        <li>
+          Open{" "}
+          <a href="https://console.typesafe.ai" target="_blank" rel="noreferrer">
+            console.typesafe.ai
+          </a>{" "}
+          and sign in with Google or an email code.
+        </li>
+        <li>
+          Open{" "}
+          <a href="https://console.typesafe.ai/settings/keys" target="_blank" rel="noreferrer">
+            API Keys
+          </a>
+          , create a key, and copy it once. It is shown only at creation.
+        </li>
+        <li>Paste that key into Jev API Key below and click Save. Leave it blank to generate without Jev.</li>
+        <li>
+          Create an LLM key too. Gemini:{" "}
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
+            Google AI Studio
+          </a>
+          . OpenAI:{" "}
+          <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">
+            platform.openai.com/api-keys
+          </a>
+          . Paste it into LLM API Key, choose the provider, and click Save.
+        </li>
+      </ol>
       <label>
         Jev API Key
         <input

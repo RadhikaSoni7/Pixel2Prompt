@@ -145,6 +145,57 @@ describe("generateReconstructionPrompt", () => {
     assert.match(calls[0] ?? "", /typesafe/)
   })
 
+  it("retries Gemini once when the API names a replacement model", async () => {
+    const calls: string[] = []
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input)
+      calls.push(url)
+      if (url.includes("gemini-3.5-flash-lite")) {
+        return jsonResponse(404, {
+          error: {
+            message:
+              "models/gemini-3.5-flash-lite is no longer available. Please update your code to use models/gemini-3.8-flash.",
+          },
+        })
+      }
+      return jsonResponse(200, {
+        candidates: [{ content: { parts: [{ text: "Recovered prompt." }] } }],
+      })
+    }
+    const result = await generateReconstructionPrompt({
+      snapshot,
+      stack: "flutter",
+      settings: settings(),
+      fetchImpl,
+    })
+    assert.deepEqual(
+      calls.map((url) => url.includes("gemini-3.8-flash")),
+      [false, true],
+    )
+    assert.equal(result.prompt, "Recovered prompt.")
+  })
+
+  it("explains a model failure without revealing the key", async () => {
+    const fetchImpl: typeof fetch = async () =>
+      jsonResponse(404, { error: { message: `model missing for ${secret}` } })
+    await assert.rejects(
+      () =>
+        generateReconstructionPrompt({
+          snapshot,
+          stack: "android",
+          settings: settings(),
+          fetchImpl,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error)
+        assert.match(error.message, /could not write a prompt/i)
+        assert.match(error.message, /model missing for \[key\]/)
+        assert.equal(error.message.includes(secret), false)
+        return true
+      },
+    )
+  })
+
   it("reports an invalid LLM key without revealing it", async () => {
     const fetchImpl: typeof fetch = async () => jsonResponse(400, { error: { message: `API key ${secret} is invalid` } })
     await assert.rejects(
@@ -186,6 +237,11 @@ describe("buildInstructions", () => {
     assert.equal(text.includes("data:image"), false)
     assert.match(text, /existing project stack/i)
     assert.match(text, /"tag":"article"/)
+  })
+
+  it("asks for Flutter and Android when those stacks are selected", () => {
+    assert.match(buildInstructions(snapshot, "flutter", null), /Flutter widget/)
+    assert.match(buildInstructions(snapshot, "android", null), /Jetpack Compose/)
   })
 })
 

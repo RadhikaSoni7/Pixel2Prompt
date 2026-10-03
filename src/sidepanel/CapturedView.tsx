@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { SectionSnapshot } from "../analyzer/snapshot.ts"
 import type { GenerationStage } from "../ai/generate.ts"
 import { STACKS, type StackId } from "../ai/stacks.ts"
@@ -8,11 +8,16 @@ type CapturedViewProps = {
   snapshot: SectionSnapshot
   previewUrl: string | null
   clipped: boolean
+  pageUrl: string
+  capturedAt: string
+  viewportWidth: number
+  viewportHeight: number
   busy: boolean
   note: string | null
   stack: StackId
   generation: "idle" | GenerationStage
   prompt: string | null
+  jevUsed: boolean | null
   onStack: (stack: StackId) => void
   onGenerate: () => void
   onParent: () => void
@@ -24,11 +29,16 @@ export function CapturedView({
   snapshot,
   previewUrl,
   clipped,
+  pageUrl,
+  capturedAt,
+  viewportWidth,
+  viewportHeight,
   busy,
   note,
   stack,
   generation,
   prompt,
+  jevUsed,
   onStack,
   onGenerate,
   onParent,
@@ -41,6 +51,11 @@ export function CapturedView({
   const generating = generation !== "idle"
   const frozen = busy || generating || locked
   const assets = snapshot.imageCount + snapshot.svgCount
+
+  useEffect(() => {
+    setCopied(false)
+    setCopyError(null)
+  }, [prompt])
 
   async function handleCopy(): Promise<void> {
     if (!prompt) return
@@ -117,11 +132,29 @@ export function CapturedView({
             <span>{formatCount(prompt.length)} characters</span>
           </div>
           <pre className="prompt glass">{prompt}</pre>
-          {previewUrl ? (
-            <img className="thumb" src={previewUrl} alt="Reference screenshot of the selected section" />
-          ) : (
-            <p className="banner bad">The screenshot could not be cropped.</p>
-          )}
+        </>
+      ) : null}
+
+      <section className="reference" aria-label="Reference">
+        <h3>Reference</h3>
+        <p>
+          {pageUrl ? `Page: ${pageUrl}` : "Page: this tab"}
+          <br />
+          Selected element: {sectionLabel(snapshot)}
+          <br />
+          Captured: {capturedAt}
+          <br />
+          Viewport: {viewportWidth} × {viewportHeight} CSS pixels · Section: {snapshot.width} × {snapshot.height} CSS pixels
+        </p>
+        {previewUrl ? (
+          <img className="thumb" src={previewUrl} alt="Reference screenshot of the selected section" />
+        ) : (
+          <p className="banner bad">The screenshot could not be cropped.</p>
+        )}
+      </section>
+
+      {prompt ? (
+        <>
           <button type="button" className={copied ? "primary done" : "primary"} onClick={() => void handleCopy()}>
             {copied ? "Copied" : "Copy prompt"}
           </button>
@@ -142,10 +175,23 @@ export function CapturedView({
           </div>
         </>
       ) : (
-        <button type="button" className="primary" onClick={onGenerate} disabled={busy || generating} aria-busy={generating}>
-          {generating ? <span className="spinner" aria-hidden="true" /> : null}
-          {generationLabel(generation)}
-        </button>
+        <>
+          <button type="button" className="primary" onClick={onGenerate} disabled={busy || generating} aria-busy={generating}>
+            {generating ? <span className="spinner" aria-hidden="true" /> : null}
+            {generationLabel(generation)}
+          </button>
+          {previewUrl ? (
+            <div className="save-row">
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => downloadDataUrl(previewUrl, "pixel2prompt-reference.png")}
+              >
+                Save reference.png
+              </button>
+            </div>
+          ) : null}
+        </>
       )}
 
       {copied ? (
@@ -154,7 +200,7 @@ export function CapturedView({
         </p>
       ) : prompt ? (
         <p className="banner ok" role="status">
-          Prompt ready. Copy it and attach the reference PNG.
+          {readyLine(jevUsed)}
         </p>
       ) : null}
       {note ? (
@@ -171,6 +217,11 @@ function generationLabel(generation: "idle" | GenerationStage): string {
   if (generation === "analyzing") return "Analyzing section..."
   if (generation === "writing") return "Generating prompt..."
   return "Generate prompt"
+}
+
+function readyLine(jevUsed: boolean | null): string {
+  if (jevUsed) return "Prompt ready. Jev classified this section. Copy it and attach the reference PNG."
+  return "Prompt ready. Generated without Jev. Copy it and attach the reference PNG."
 }
 
 function sectionLabel(snapshot: SectionSnapshot): string {
